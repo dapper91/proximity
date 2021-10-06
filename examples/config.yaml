@@ -1,0 +1,73 @@
+version: 1.0
+
+access_log:
+  format: "{proto}://{remote_addr}:{remote_port} to {upstream_addr}:{upstream_port} {bytes_sent} bytes sent in {response_time} sec"
+  timestamp_precision: "millis"
+
+servers:
+  - host: 127.0.0.1
+    port: 8080
+    proto: tcp
+    upstream: web-servers
+    queue:
+      size: 1024
+      timeout: 10s
+
+  - host: 127.0.0.1
+    port: 8443
+    proto: udp
+    upstream: stream-servers
+
+
+upstreams:
+  - name: web-servers
+    hosts:
+      - host: localhost
+        port: 8001
+        weight: 2
+        max_fails: 2
+        fail_timeout: 60s
+        health_check:
+          interval: 5s
+          fails: 5
+          passes: 3
+      - host: localhost
+        port: 8002
+        ipv6: true
+        weight: 1
+        max_fails: 2
+        fail_timeout: 30s
+      - host: localhost
+        port: 8003
+        backup: true
+        max_fails: 1
+        fail_timeout: 10s
+    resolver: default
+    sticky:
+      kind: ip
+
+  - name: stream-servers
+    hosts:
+      - host: localhost
+        port: 8011
+        weight: 2
+        max_fails: 2
+        max_conns: 1024
+        fail_timeout: 60s
+      - host: localhost
+        port: 8012
+        weight: 1
+        max_fails: 2
+        fail_timeout: 30s
+      - host: localhost
+        port: 8013
+        backup: true
+        max_fails: 1
+        fail_timeout: 10s
+    resolver: default
+
+resolvers:
+  - name: default
+    host: 127.0.0.1
+    port: 53
+    expiration: 30s
